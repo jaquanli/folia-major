@@ -22,7 +22,7 @@ interface FloatingPlayerControlsProps {
     currentTime: MotionValue<number>;
     duration: number;
     loopMode: 'off' | 'all' | 'one';
-    currentView: 'home' | 'player';
+    currentView: 'home' | 'player' | 'visEditor';
     audioSrc: string | null;
     canTogglePlay?: boolean;
     lyrics: LyricData | null;

@@ -1,0 +1,307 @@
+/* Local layout and role styling for the React Flow visualizer complex editor. */
+.vis-editor {
+    --vis-editor-panel: color-mix(in srgb, var(--vis-editor-bg) 82%, #ffffff 18%);
+    --vis-editor-panel-strong: color-mix(in srgb, var(--vis-editor-bg) 70%, #ffffff 30%);
+    --vis-editor-text: var(--vis-editor-primary);
+    --vis-editor-muted: color-mix(in srgb, var(--vis-editor-primary) 62%, transparent);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+    color: var(--vis-editor-text);
+    background:
+        radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--vis-editor-accent) 22%, transparent), transparent 30rem),
+        linear-gradient(135deg, var(--vis-editor-bg), color-mix(in srgb, var(--vis-editor-bg) 86%, #000000 14%));
+}
+
+.vis-editor--daylight {
+    --vis-editor-panel: rgba(255, 255, 255, 0.86);
+    --vis-editor-panel-strong: rgba(255, 255, 255, 0.96);
+    --vis-editor-muted: rgba(39, 39, 42, 0.62);
+}
+
+.vis-editor * {
+    box-sizing: border-box;
+}
+
+.vis-editor__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--vis-editor-primary) 12%, transparent);
+    background: color-mix(in srgb, var(--vis-editor-bg) 86%, transparent);
+    backdrop-filter: blur(18px);
+}
+
+.vis-editor__eyebrow {
+    margin-bottom: 0.25rem;
+    color: var(--vis-editor-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.vis-editor h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.15;
+}
+
+.vis-editor__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vis-editor button {
+    border: 1px solid color-mix(in srgb, var(--vis-editor-primary) 18%, transparent);
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    color: var(--vis-editor-text);
+    background: var(--vis-editor-panel);
+    font: inherit;
+    cursor: pointer;
+}
+
+.vis-editor button:hover {
+    border-color: color-mix(in srgb, var(--vis-editor-accent) 58%, transparent);
+}
+
+.vis-editor__primary-action {
+    color: var(--vis-editor-bg);
+    border-color: transparent;
+    background: var(--vis-editor-accent);
+}
+
+.vis-editor__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
+    gap: 1rem;
+    min-height: 0;
+    flex: 1;
+    padding: 1rem;
+}
+
+.vis-editor__canvas,
+.vis-editor__side,
+.vis-editor-preview,
+.vis-editor-inspector {
+    min-height: 0;
+}
+
+.vis-editor__canvas {
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--vis-editor-primary) 12%, transparent);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--vis-editor-bg) 76%, #000000 24%);
+}
+
+.vis-editor__side {
+    display: grid;
+    grid-template-rows: minmax(12rem, 0.82fr) minmax(18rem, 1fr);
+    gap: 1rem;
+}
+
+.vis-editor-preview,
+.vis-editor-inspector {
+    overflow: hidden;
+    border: 1px solid;
+    border-color: color-mix(in srgb, var(--vis-editor-primary) 12%, transparent);
+    border-radius: 0.75rem;
+    background: var(--vis-editor-panel);
+    backdrop-filter: blur(18px);
+}
+
+.vis-editor-preview {
+    display: flex;
+    flex-direction: column;
+}
+
+.vis-editor-panel-title {
+    padding: 0.85rem 1rem;
+    color: var(--vis-editor-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.vis-editor-preview__frame {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    place-items: stretch;
+    overflow: hidden;
+    border-top: 1px solid color-mix(in srgb, var(--vis-editor-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--vis-editor-bg) 82%, #000000 18%);
+}
+
+.vis-editor-empty {
+    display: grid;
+    min-height: 9rem;
+    place-items: center;
+    padding: 1rem;
+    color: var(--vis-editor-muted);
+    text-align: center;
+}
+
+.vis-editor-inspector {
+    overflow-y: auto;
+    padding-bottom: 1rem;
+}
+
+.vis-editor-inspector__id {
+    margin: 0 1rem 1rem;
+    color: var(--vis-editor-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+}
+
+.vis-editor-field,
+.vis-editor-check {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0 1rem 1rem;
+    color: var(--vis-editor-muted);
+    font-size: 0.82rem;
+}
+
+.vis-editor-check {
+    display: flex;
+    align-items: center;
+}
+
+.vis-editor-field input[type='text'],
+.vis-editor-field input:not([type]) {
+    width: 100%;
+}
+
+.vis-editor input {
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--vis-editor-primary) 14%, transparent);
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.65rem;
+    color: var(--vis-editor-text);
+    background: var(--vis-editor-panel-strong);
+    font: inherit;
+}
+
+.vis-editor input[type='range'] {
+    padding: 0;
+    accent-color: var(--vis-editor-accent);
+}
+
+.vis-editor-readonly-grid {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 0.45rem 0.75rem;
+    margin: 0 1rem 1rem;
+    color: var(--vis-editor-muted);
+    font-size: 0.82rem;
+}
+
+.vis-editor-readonly-grid strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--vis-editor-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vis-editor-inspector__hint {
+    margin: 0 1rem;
+    color: var(--vis-editor-muted);
+    font-size: 0.78rem;
+}
+
+.vis-editor-node {
+    min-width: 11rem;
+    border: 1px solid color-mix(in srgb, var(--node-color, var(--vis-editor-accent)) 48%, transparent);
+    border-radius: 0.65rem;
+    padding: 0.75rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--node-color, var(--vis-editor-accent)) 30%, #111111 70%), #111111);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
+.vis-editor-node--selected {
+    outline: 2px solid var(--vis-editor-accent);
+    outline-offset: 2px;
+}
+
+.vis-editor-node--input {
+    --node-color: #38bdf8;
+}
+
+.vis-editor-node--background {
+    --node-color: #22c55e;
+}
+
+.vis-editor-node--main {
+    --node-color: #a78bfa;
+}
+
+.vis-editor-node--overlay {
+    --node-color: #f59e0b;
+}
+
+.vis-editor-node--output {
+    --node-color: #fb7185;
+}
+
+.vis-editor-node__meta,
+.vis-editor-node__kind,
+.vis-editor-node__status {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.72rem;
+}
+
+.vis-editor-node__meta {
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vis-editor-node__label {
+    margin: 0.35rem 0 0.25rem;
+    font-size: 0.98rem;
+    font-weight: 800;
+}
+
+.vis-editor .react-flow__handle {
+    width: 0.65rem;
+    height: 0.65rem;
+    border: 2px solid #ffffff;
+    background: var(--vis-editor-accent);
+}
+
+.vis-editor .react-flow__controls,
+.vis-editor .react-flow__minimap {
+    color: #111111;
+}
+
+@media (max-width: 900px) {
+    .vis-editor__header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .vis-editor__body {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    .vis-editor__canvas {
+        min-height: 28rem;
+    }
+
+    .vis-editor__side {
+        grid-template-rows: minmax(12rem, auto) minmax(18rem, auto);
+    }
+}

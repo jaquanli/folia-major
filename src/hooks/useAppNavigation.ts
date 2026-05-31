@@ -3,7 +3,7 @@ import type { HomeViewTab, LocalLibraryGroup, NeteasePlaylist } from '../types';
 import type { NavidromeViewSelection } from '../types/navidrome';
 import { useSearchNavigationStore } from '../stores/useSearchNavigationStore';
 
-type ViewState = 'home' | 'player';
+export type ViewState = 'home' | 'player' | 'visEditor';
 
 export type HomeOverlay =
     | { type: 'playlist'; playlist: NeteasePlaylist; }
@@ -38,6 +38,10 @@ type OverlayDisplayState = {
 const LAST_APP_VIEW_KEY = 'last_app_view';
 const OPEN_PLAYER_ON_LAUNCH_KEY = 'open_player_on_launch';
 const NAV_DEBUG_ENABLED = false;
+
+export const isNavigationViewState = (view: unknown): view is ViewState => (
+    view === 'home' || view === 'player' || view === 'visEditor'
+);
 
 const buildHistoryState = (
     view: ViewState,
@@ -220,7 +224,7 @@ export function useAppNavigation() {
         const handlePopState = (event: PopStateEvent) => {
             const state = event.state as NavigationHistoryState | null;
 
-            if (!state) {
+            if (!state || !isNavigationViewState(state.view)) {
                 logNavigation('popstate:null-state', {
                     historyState: state,
                 });
@@ -341,6 +345,51 @@ export function useAppNavigation() {
         });
     };
 
+    const navigateToVisEditor = () => {
+        useSearchNavigationStore.getState().hideSearchOverlay();
+
+        if (overlayStack.length > 0 && overlayView !== null) {
+            pushNavigationState({
+                view: 'visEditor',
+                overlays: overlayStack,
+                overlayView: null,
+                overlayOriginView,
+                replace: true,
+                hash: '#vis-editor',
+                search: null,
+            });
+            return;
+        }
+
+        if (window.history.state?.view !== 'visEditor') {
+            logNavigation('navigateToVisEditor:push', {
+                view: 'visEditor',
+                overlays: overlayStack,
+                search: null,
+                hash: '#vis-editor',
+            });
+            pushNavigationState({
+                view: 'visEditor',
+                overlays: overlayStack,
+                overlayView,
+                overlayOriginView,
+                hash: '#vis-editor',
+                search: null,
+            });
+            return;
+        }
+
+        setCurrentView('visEditor');
+        localStorage.setItem(LAST_APP_VIEW_KEY, 'visEditor');
+        logNavigation('navigateToVisEditor:setViewOnly', {
+            view: 'visEditor',
+            overlays: overlayStack,
+            overlayView,
+            overlayOriginView,
+            search: null,
+        });
+    };
+
     const navigateToSearch = ({
         query,
         sourceTab,
@@ -400,7 +449,7 @@ export function useAppNavigation() {
 
     const navigateToHome = () => {
         if (overlayStack.length > 0) {
-            if (currentView === 'player' && overlayView === null) {
+            if (currentView !== 'home' && overlayView === null) {
                 const overlayState = resolveOverlayPushState(
                     overlayOriginView ?? 'home',
                     overlayStack.length - 1,
@@ -453,6 +502,20 @@ export function useAppNavigation() {
                     }
                     : null,
             });
+            return;
+        }
+
+        if (currentView === 'visEditor') {
+            pushNavigationState({
+                view: 'home',
+                overlays: [],
+                overlayView: null,
+                overlayOriginView: null,
+                replace: true,
+                hash: window.location.pathname + window.location.search,
+                search: null,
+            });
+            useSearchNavigationStore.getState().hideSearchOverlay();
             return;
         }
 
@@ -600,6 +663,7 @@ export function useAppNavigation() {
         localMusicState,
         setLocalMusicState,
         navigateToPlayer,
+        navigateToVisEditor,
         navigateToHome,
         navigateDirectHome,
         navigateToSearch,

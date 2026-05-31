@@ -2,10 +2,11 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useMotionValue } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { loadCachedOrFetchCover } from './services/coverCache';
-import VisualizerRenderer from './components/visualizer/VisualizerRenderer';
+import VisualizerComplexRenderer from './components/visualizer/VisualizerComplexRenderer';
 import AppShell from './components/app/AppShell';
 import Home from './components/app/Home';
 import PlayerPanel from './components/app/PlayerPanel';
+import VisEditorView from './components/app/vis-editor/VisEditorView';
 import AppDialogs from './components/app/dialogs/AppDialogs';
 import { createCopySongInfoSuccessHandler } from './components/app/dialogs/createCopySongInfoSuccessHandler';
 import { buildSettingsDialogModel, type SettingsModalState } from './components/app/dialogs/buildSettingsDialogModel';
@@ -232,6 +233,9 @@ export default function App() {
         queueAddBehavior,
         audioOutputDeviceId,
         loopMode,
+        visualizerComplex,
+        handleSetVisualizerComplex,
+        handleResetVisualizerComplex,
         handleToggleCoverColorBg,
         handleToggleStaticMode,
         handleToggleDisableHomeDynamicBackground,
@@ -541,6 +545,7 @@ export default function App() {
         setLocalMusicState,
         navigateToPlayer,
         navigateToHome,
+        navigateToVisEditor,
         navigateDirectHome,
         navigateToSearch,
         closeSearchView,
@@ -1730,6 +1735,7 @@ export default function App() {
         loadStageSessionIntoPlayback,
         nowPlayingConnectionStatus,
         onAudioOutputDeviceChange: handleAudioOutputDeviceChange,
+        onOpenVisEditor: navigateToVisEditor,
     }), [
         activePlaybackContext,
         clearPersistedStagePlaybackCache,
@@ -1742,6 +1748,7 @@ export default function App() {
         leaveStagePlayback,
         loadCurrentSongLyricPreview,
         loadStageSessionIntoPlayback,
+        navigateToVisEditor,
         nowPlayingConnectionStatus,
         settingsModalState,
         stageSource,
@@ -1940,8 +1947,9 @@ export default function App() {
                 className="absolute inset-0 z-0"
                 onClick={handleContainerClick}
             >
-                <VisualizerRenderer
-                    mode={visualizerMode}
+                <VisualizerComplexRenderer
+                    complex={visualizerComplex}
+                    fallbackMode={visualizerMode}
                     currentTime={currentTime}
                     currentLineIndex={currentLineIndex}
                     lines={lyrics?.lines || []}
@@ -1991,6 +1999,34 @@ export default function App() {
                                 : (t('options.enableStageModeDesc') || '本地 Stage API 已开启')}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {currentView === 'visEditor' && (
+                <div className="absolute inset-0 z-[80]">
+                    <VisEditorView
+                        complex={visualizerComplex}
+                        theme={visualizerTheme}
+                        isDaylight={isDaylight}
+                        currentTime={currentTime}
+                        currentLineIndex={currentLineIndex}
+                        lines={lyrics?.lines || []}
+                        audioPower={audioPower}
+                        audioBands={audioBands}
+                        fallbackMode={visualizerMode}
+                        songTitle={currentSong?.name}
+                        coverUrl={getCoverUrl()}
+                        lyricsFontScale={lyricsFontScale}
+                        cadenzaTuning={cadenzaTuning}
+                        partitaTuning={partitaTuning}
+                        fumeTuning={fumeTuning}
+                        cappellaTuning={cappellaTuning}
+                        tiltTuning={tiltTuning}
+                        cappellaCustomEmojiImages={cappellaCustomEmojiImages}
+                        onSaveComplex={handleSetVisualizerComplex}
+                        onResetComplex={handleResetVisualizerComplex}
+                        onBack={currentSong ? navigateToPlayer : navigateToHome}
+                    />
                 </div>
             )}
 

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Command, MousePointer2, Keyboard, Settings2, Trash2, Database, Layers, Monitor, PlayCircle, Loader2, Sparkles, Server, Check, AlertCircle, Palette, FolderOpen, Pencil, FlaskConical, ChevronLeft, ChevronRight, RotateCcw, GamepadDirectional, RefreshCw, Download, ExternalLink, Minimize2, EyeOff, Cpu, KeyRound, Globe, ShieldAlert, AppWindow } from 'lucide-react';
+import { X, Command, MousePointer2, Keyboard, Settings2, Trash2, Database, Layers, Monitor, PlayCircle, Loader2, Sparkles, Server, Check, AlertCircle, FolderOpen, Pencil, FlaskConical, ChevronLeft, ChevronRight, RotateCcw, GamepadDirectional, RefreshCw, Download, ExternalLink, Minimize2, EyeOff, Cpu, KeyRound, Globe, ShieldAlert, AppWindow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getCacheUsageByCategory, clearCacheByCategory, clearAllData } from '../../services/db';
-import { DualTheme, StageStatus, StageSource, Theme, ThemeMode, type CadenzaTuning, type CappellaEmojiImage, type CappellaTuning, type FumeTuning, type NowPlayingConnectionStatus, type PartitaTuning, type QueueAddBehavior, type TiltTuning, type StoredCustomLyricsFont, type VisualizerMode } from '../../types';
+import { DualTheme, StageStatus, StageSource, Theme, ThemeMode, type NowPlayingConnectionStatus, type QueueAddBehavior } from '../../types';
 import { getNavidromeConfig, saveNavidromeConfig, clearNavidromeConfig, hashPassword, navidromeApi, isNavidromeEnabled, setNavidromeEnabled } from '../../services/navidromeService';
 import { NavidromeConfig } from '../../types/navidrome';
-import VisPlayground from '../visualizer/VisPlayground';
 import { VISUALIZER_REGISTRY, getVisualizerModeLabel } from '../visualizer/registry';
-import ThemePark from './ThemePark';
 import LyricFilterSettingsModal from './LyricFilterSettingsModal';
 import meowImageUrl from '../../../build/miao.png';
 import type { LyricData } from '../../types';
@@ -19,6 +17,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 interface SettingsModalProps {
     onClose: () => void;
+    onOpenVisEditor?: () => void;
     initialTab?: 'help' | 'options';
     theme?: Theme;
     bgMode: ThemeMode;
@@ -63,6 +62,7 @@ const stopMediaStream = (stream: MediaStream | null) => {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
     onClose,
+    onOpenVisEditor,
     initialTab = 'help',
     theme,
     bgMode,
@@ -71,7 +71,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     themeParkInitialTheme,
     isCustomThemePreferred,
     songThemeAutoSwitchEnabled,
-    onSaveCustomTheme,
     onApplyCustomTheme,
     onToggleCustomThemePreferred,
     onToggleSongThemeAutoSwitch,
@@ -106,17 +105,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         backgroundOpacity,
         isDaylight,
         visualizerMode,
-        cadenzaTuning,
-        partitaTuning,
-        fumeTuning,
-        cappellaTuning,
-        tiltTuning,
-        cappellaCustomEmojiImages,
-        isLoadingCappellaCustomEmojiPack,
-        lyricsFontStyle,
-        lyricsFontScale,
-        lyricsCustomFontFamily,
-        lyricsCustomFontLabel,
         lyricFilterPattern,
         showOpenPanelCloseButton,
         enableNowPlayingStage,
@@ -136,27 +124,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         handleToggleMediaCache: onToggleMediaCache,
         handleSetBackgroundOpacity: setBackgroundOpacity,
         handleSetVisualizerMode: onVisualizerModeChange,
-        handleSetPartitaTuning: onPartitaTuningChange,
-        handleResetPartitaTuning: onResetPartitaTuning,
-        handleSetFumeTuning: onFumeTuningChange,
-        handleResetFumeTuning: onResetFumeTuning,
-        handleSetCappellaTuning: onCappellaTuningChange,
-        handleResetCappellaTuning: onResetCappellaTuning,
-        handleSetTiltTuning: onTiltTuningChange,
-        handleResetTiltTuning: onResetTiltTuning,
-        handleImportCustomCappellaEmojiPack: onImportCappellaCustomEmojiPack,
-        handleClearCustomCappellaEmojiPack: onClearCappellaCustomEmojiPack,
-        handleSetLyricsFontStyle: onLyricsFontStyleChange,
-        handleSetLyricsFontScale: onLyricsFontScaleChange,
-        handleSetLyricsCustomFont: onLyricsCustomFontChange,
-        handleUploadLyricsCustomFont: onLyricsCustomFontUpload,
         handleToggleOpenPanelCloseButton: onToggleOpenPanelCloseButton,
         handleSetQueueAddBehavior: onQueueAddBehaviorChange,
     } = useSettingsUiStore(useShallow(selectSettingsUiSnapshot));
     const setIsSubSettingsViewOpen = useSettingsUiStore(state => state.setIsSubSettingsViewOpen);
     const [activeTab, setActiveTab] = useState<'help' | 'options'>(initialTab);
-    const [showVisPlayground, setShowVisPlayground] = useState(false);
-    const [showThemePark, setShowThemePark] = useState(false);
     const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
     const [showPlaybackSettings, setShowPlaybackSettings] = useState(false);
     const [audioOutputDevices, setAudioOutputDevices] = useState<AudioOutputDeviceOption[]>([]);
@@ -704,9 +676,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         event.stopPropagation();
         onCloseOverlay();
     };
-    const isSubSettingsViewOpen = showVisPlayground
-        || showThemePark
-        || showAppearanceSettings
+    const handleOpenVisualSettings = () => {
+        if (onOpenVisEditor) {
+            onClose();
+            onOpenVisEditor();
+            return;
+        }
+
+        setShowAppearanceSettings(true);
+    };
+    const isSubSettingsViewOpen = showAppearanceSettings
         || showPlaybackSettings
         || showIntegrationSettings
         || showStorageSettings
@@ -1052,7 +1031,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <section className="space-y-3">
                                 <button
                                     type="button"
-                                    onClick={() => setShowAppearanceSettings(true)}
+                                    onClick={handleOpenVisualSettings}
                                     className={`w-full p-4 rounded-xl border transition-colors ${settingsCardInteractiveClass}`}
                                 >
                                     <div className="flex items-center justify-between gap-4">
@@ -1065,7 +1044,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     {t('options.visualSettings') || '视觉设置'}
                                                 </div>
                                                 <div className="text-xs opacity-50 max-w-[260px]" style={{ color: 'var(--text-secondary)' }}>
-                                                    主题、歌词渲染模式、样式入口和背景透明度。
+                                                    打开独立视觉编辑器，调整主题、歌词渲染和背景外观。
                                                 </div>
                                             </div>
                                         </div>
@@ -1217,154 +1196,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </section>
 
                             <div className="hidden">
-                            {/* Visual Settings */}
-                            <section>
-                                <h3 className="text-sm font-bold uppercase tracking-wider opacity-50 mb-4 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                                    <Sparkles size={14} /> {t('options.visualSettings') || "Visual Settings"}
-                                </h3>
-                                <div className="space-y-4">
-                                    {/* Theme Presets */}
-                                    <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                {t('options.themePresets') || "Theme Presets"}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowThemePark(true)}
-                                                className="shrink-0 w-9 h-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
-                                                style={{ color: 'var(--text-primary)' }}
-                                                title={t('options.openThemePark') || '打开 Theme Park'}
-                                                aria-label={t('options.openThemePark') || '打开 Theme Park'}
-                                            >
-                                                <Palette size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                onClick={onApplyDefaultTheme}
-                                                className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all hover:bg-white/5"
-                                                style={{
-                                                    borderColor: bgMode === 'default' ? theme?.accentColor || 'transparent' : 'transparent',
-                                                    backgroundColor: isDaylight ? 'rgba(245, 245, 244, 0.8)' : 'rgba(9, 9, 11, 0.5)'
-                                                }}
-                                            >
-                                                <div className="w-6 h-6 rounded-full shadow-sm" style={{ background: `linear-gradient(135deg, ${themeParkInitialTheme.light.backgroundColor}, ${themeParkInitialTheme.dark.backgroundColor})`, borderColor: isDaylight ? 'rgba(24,24,27,0.08)' : 'rgba(255,255,255,0.15)' }} />
-                                                <span className="text-xs opacity-80" style={{ color: isDaylight ? '#27272a' : '#e4e4e7' }}>{t('options.themePresetsDefault') || "Default"}</span>
-                                            </button>
-                                            <button
-                                                onClick={() => onApplyCustomTheme()}
-                                                disabled={!hasCustomTheme}
-                                                className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
-                                                style={{
-                                                    borderColor: bgMode === 'custom' ? theme?.accentColor || 'transparent' : 'transparent',
-                                                    backgroundColor: isDaylight ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.08)'
-                                                }}
-                                            >
-                                                <div className="w-6 h-6 rounded-full" style={{ background: hasCustomTheme ? `linear-gradient(135deg, ${themeParkInitialTheme.light.accentColor}, ${themeParkInitialTheme.dark.accentColor})` : 'rgba(114,119,134,0.4)' }} />
-                                                <span className="text-xs opacity-80" style={{ color: 'var(--text-primary)' }}>{t('options.customTheme') || "Custom"}</span>
-                                            </button>
-                                        </div>
-                                        <div className="bg-white/5 p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                    {t('options.preferCustomTheme') || '优先使用自定义主题'}
-                                                </div>
-                                                <div className="text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
-                                                    {t('options.preferCustomThemeDesc') || '保存后，后续主题切换会优先保留自定义主题。'}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => hasCustomTheme && onToggleCustomThemePreferred(!isCustomThemePreferred)}
-                                                disabled={!hasCustomTheme}
-                                                className={`w-12 h-6 rounded-full p-1 transition-colors ${!isCustomThemePreferred ? toggleOffBackgroundClass : ''} disabled:opacity-40 disabled:cursor-not-allowed`}
-                                                style={{ backgroundColor: isCustomThemePreferred ? theme?.secondaryColor || 'rgba(114, 119, 134, 1)' : undefined }}
-                                            >
-                                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${isCustomThemePreferred ? 'translate-x-6' : 'translate-x-0'}`} />
-                                            </button>
-                                        </div>
-                                        <div className="bg-white/5 p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                    {t('options.autoSwitchSongTheme') || '主题自动切换'}
-                                                </div>
-                                                <div className="text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
-                                                    {t('options.autoSwitchSongThemeDesc') || '当切换到的歌曲曾经生成过 AI 主题的时候，自动应用 AI 主题。'}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => onToggleSongThemeAutoSwitch(!songThemeAutoSwitchEnabled)}
-                                                className={`w-12 h-6 rounded-full p-1 transition-colors ${!songThemeAutoSwitchEnabled ? toggleOffBackgroundClass : ''}`}
-                                                style={{ backgroundColor: songThemeAutoSwitchEnabled ? theme?.secondaryColor || 'rgba(114, 119, 134, 1)' : undefined }}
-                                            >
-                                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${songThemeAutoSwitchEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                    {t('options.lyricsRenderer') || "Lyrics Renderer"}
-                                                </div>
-                                                <div className="text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
-                                                    {t('options.lyricsRendererDesc') || "Choose the lyrics rendering mode used on the playback page."}
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowVisPlayground(true)}
-                                                className="shrink-0 w-9 h-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
-                                                style={{ color: 'var(--text-primary)' }}
-                                                title={t('options.openLyricsStyleSettings') || '打开歌词样式设置'}
-                                                aria-label={t('options.openLyricsStyleSettings') || '打开歌词样式设置'}
-                                            >
-                                                <Settings2 size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                            {visualizerModeOptions.map(option => (
-                                                <button
-                                                    key={option.mode}
-                                                    onClick={() => onVisualizerModeChange?.(option.mode)}
-                                                    className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all hover:bg-white/5"
-                                                    style={{
-                                                        borderColor: visualizerMode === option.mode ? theme?.accentColor || 'var(--text-accent)' : 'transparent',
-                                                        backgroundColor: visualizerMode === option.mode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'
-                                                    }}
-                                                >
-                                                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                        {option.label}
-                                                    </span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Opacity Slider */}
-                                    <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                {t('options.backgroundOpacity') || "Background Opacity"}
-                                            </div>
-                                            <div className="text-xs font-mono opacity-50">
-                                                {Math.round(backgroundOpacity * 100)}%
-                                            </div>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="1"
-                                            step="0.05"
-                                            value={backgroundOpacity}
-                                            onChange={(e) => setBackgroundOpacity?.(parseFloat(e.target.value))}
-                                            className={rangeInputClass}
-                                        />
-                                    </div>
-                                </div>
-                            </section>
-
                             {/* Cache Details */}
                             <section>
                                 <h3 className="text-sm font-bold uppercase tracking-wider opacity-50 mb-4 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
@@ -2082,67 +1913,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     )}
                 </AnimatePresence>
             </motion.div>
-            <AnimatePresence>
-                {showVisPlayground && (
-                    <VisPlayground
-                        theme={theme}
-                        isDaylight={isDaylight}
-                        visualizerMode={visualizerMode}
-                        backgroundOpacity={backgroundOpacity}
-                        staticMode={staticMode}
-                        cadenzaTuning={cadenzaTuning}
-                        partitaTuning={partitaTuning}
-                        fumeTuning={fumeTuning}
-                        cappellaTuning={cappellaTuning}
-                        tiltTuning={tiltTuning}
-                        cappellaCustomEmojiImages={cappellaCustomEmojiImages}
-                        fontStyle={lyricsFontStyle}
-                        fontScale={lyricsFontScale}
-                        customFontFamily={lyricsCustomFontFamily}
-                        customFontLabel={lyricsCustomFontLabel}
-                        onFontStyleChange={onLyricsFontStyleChange}
-                        onFontScaleChange={onLyricsFontScaleChange}
-                        onCustomFontChange={onLyricsCustomFontChange}
-                        onUploadCustomFont={onLyricsCustomFontUpload}
-                        onPartitaTuningChange={onPartitaTuningChange}
-                        onResetPartitaTuning={onResetPartitaTuning}
-                        onFumeTuningChange={onFumeTuningChange}
-                        onResetFumeTuning={onResetFumeTuning}
-                        onCappellaTuningChange={onCappellaTuningChange}
-                        onResetCappellaTuning={onResetCappellaTuning}
-                        onTiltTuningChange={onTiltTuningChange}
-                        onResetTiltTuning={onResetTiltTuning}
-                        onImportCappellaCustomEmojiPack={onImportCappellaCustomEmojiPack}
-                        onClearCappellaCustomEmojiPack={onClearCappellaCustomEmojiPack}
-                        isLoadingCappellaCustomEmojiPack={isLoadingCappellaCustomEmojiPack}
-                        onClose={() => setShowVisPlayground(false)}
-                    />
-                )}
-            </AnimatePresence>
-            <AnimatePresence>
-                {showThemePark && (
-                    <ThemePark
-                        initialTheme={themeParkInitialTheme}
-                        isDaylight={isDaylight}
-                        visualizerMode={visualizerMode}
-                        staticMode={staticMode}
-                        backgroundOpacity={backgroundOpacity}
-                        cadenzaTuning={cadenzaTuning}
-                        partitaTuning={partitaTuning}
-                        fumeTuning={fumeTuning}
-                        cappellaTuning={cappellaTuning}
-                        cappellaCustomEmojiImages={cappellaCustomEmojiImages}
-                        lyricsFontStyle={lyricsFontStyle}
-                        lyricsFontScale={lyricsFontScale}
-                        lyricsCustomFontFamily={lyricsCustomFontFamily}
-                        onSaveTheme={(dualTheme) => {
-                            onSaveCustomTheme(dualTheme);
-                            setShowThemePark(false);
-                        }}
-                        onClose={() => setShowThemePark(false)}
-                    />
-                )}
-            </AnimatePresence>
             {renderSettingsSubview({
                 isOpen: showPlaybackSettings,
                 onClose: () => setShowPlaybackSettings(false),
@@ -2283,16 +2053,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                             {t('options.themePresets') || "Theme Presets"}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowThemePark(true)}
-                                                className={`shrink-0 w-9 h-9 rounded-full border transition-colors flex items-center justify-center ${utilityGhostButtonClass}`}
-                                            style={{ color: 'var(--text-primary)' }}
-                                            title={t('options.openThemePark') || '打开 Theme Park'}
-                                            aria-label={t('options.openThemePark') || '打开 Theme Park'}
-                                        >
-                                            <Palette size={16} />
-                                        </button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
@@ -2323,7 +2083,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <span className="text-xs opacity-80" style={{ color: 'var(--text-primary)' }}>{t('options.customTheme') || "Custom"}</span>
                                         </button>
                                     </div>
-                                        <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${settingsCardClass}`}>
+                                    <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${settingsCardClass}`}>
                                         <div className="space-y-1">
                                             <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                                 {t('options.preferCustomTheme') || '优先使用自定义主题'}
@@ -2341,7 +2101,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${isCustomThemePreferred ? 'translate-x-6' : 'translate-x-0'}`} />
                                         </button>
                                     </div>
-                                        <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${settingsCardClass}`}>
+                                    <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${settingsCardClass}`}>
                                         <div className="space-y-1">
                                             <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                                 {t('options.autoSwitchSongTheme') || '主题自动切换'}
@@ -2360,7 +2120,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
                                 </div>
 
-                                    <div className={`p-4 rounded-xl border space-y-3 ${settingsCardClass}`}>
+                                <div className={`p-4 rounded-xl border space-y-3 ${settingsCardClass}`}>
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="space-y-1">
                                             <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -2370,27 +2130,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 {t('options.lyricsRendererDesc') || "Choose the lyrics rendering mode used on the playback page."}
                                             </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowVisPlayground(true)}
-                                                className={`shrink-0 w-9 h-9 rounded-full border transition-colors flex items-center justify-center ${utilityGhostButtonClass}`}
-                                            style={{ color: 'var(--text-primary)' }}
-                                            title={t('options.openLyricsStyleSettings') || '打开歌词样式设置'}
-                                            aria-label={t('options.openLyricsStyleSettings') || '打开歌词样式设置'}
-                                        >
-                                            <Settings2 size={16} />
-                                        </button>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         {visualizerModeOptions.map(option => (
                                             <button
                                                 key={option.mode}
                                                 onClick={() => onVisualizerModeChange?.(option.mode)}
-                                                    className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all"
-                                                    style={{
-                                                        ...getAccentOptionStyle(visualizerMode === option.mode),
-                                                    }}
-                                                >
+                                                className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all"
+                                                style={{
+                                                    ...getAccentOptionStyle(visualizerMode === option.mode),
+                                                }}
+                                            >
                                                 <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                                     {option.label}
                                                 </span>
@@ -2399,7 +2149,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
                                 </div>
 
-                                    <div className={`p-4 rounded-xl border space-y-3 ${settingsCardClass}`}>
+                                <div className={`p-4 rounded-xl border space-y-3 ${settingsCardClass}`}>
                                     <div className="flex justify-between items-center">
                                         <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                             {t('options.backgroundOpacity') || "Background Opacity"}

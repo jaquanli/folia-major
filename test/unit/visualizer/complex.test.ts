@@ -1,0 +1,94 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+    VISUALIZER_COMPLEX_STORAGE_KEY,
+    createDefaultVisualizerComplex,
+    normalizeVisualizerComplex,
+    readStoredVisualizerComplex,
+    writeStoredVisualizerComplex,
+} from '@/components/visualizer/complex';
+
+// test/unit/visualizer/complex.test.ts
+// Locks the persisted visualizer complex schema and fallback behavior.
+const createLocalStorageMock = (): Storage => {
+    const store = new Map<string, string>();
+
+    return {
+        get length() {
+            return store.size;
+        },
+        getItem: (key: string) => store.get(key) ?? null,
+        key: (index: number) => Array.from(store.keys())[index] ?? null,
+        setItem: (key: string, value: string) => {
+            store.set(key, value);
+        },
+        removeItem: (key: string) => {
+            store.delete(key);
+        },
+        clear: () => {
+            store.clear();
+        },
+    };
+};
+
+describe('visualizer complex', () => {
+    let storage: Storage;
+
+    beforeEach(() => {
+        storage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', storage);
+        (globalThis as { window?: { localStorage: Storage; }; }).window = { localStorage: storage };
+        vi.restoreAllMocks();
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        delete (globalThis as { window?: unknown; }).window;
+    });
+
+    it('builds the default output stack', () => {
+        const complex = createDefaultVisualizerComplex();
+
+        expect(complex.version).toBe(1);
+        expect(complex.output.bgNodeIds).toEqual(['bg-solid', 'bg-geometric', 'bg-vignette']);
+        expect(complex.output.mainNodeIds).toEqual(['main-classic']);
+        expect(complex.output.overlayNodeIds).toEqual(['overlay-subtitle']);
+    });
+
+    it('falls back to default for malformed stored data', () => {
+        storage.setItem(VISUALIZER_COMPLEX_STORAGE_KEY, '{bad');
+
+        expect(readStoredVisualizerComplex().output.mainNodeIds).toEqual(['main-classic']);
+    });
+
+    it('normalizes node positions and opacity values', () => {
+        const normalized = normalizeVisualizerComplex({
+            version: 1,
+            nodes: [
+                {
+                    id: 'bg',
+                    role: 'visualizerBg',
+                    kind: 'solidTheme',
+                    label: 'Bg',
+                    enabled: true,
+                    position: { x: '10', y: '20' },
+                    config: { opacity: 2 },
+                },
+            ],
+            edges: [],
+            output: { bgNodeIds: ['bg'], mainNodeIds: [], overlayNodeIds: [] },
+        });
+
+        const node = normalized.nodes[0];
+        expect(node.position).toEqual({ x: 10, y: 20 });
+        expect(node.role === 'visualizerBg' ? node.config.opacity : null).toBe(1);
+    });
+
+    it('writes normalized complex data to localStorage', () => {
+        const complex = createDefaultVisualizerComplex();
+        writeStoredVisualizerComplex(complex);
+
+        const saved = JSON.parse(storage.getItem(VISUALIZER_COMPLEX_STORAGE_KEY) ?? 'null');
+        expect(saved.version).toBe(1);
+        expect(saved.output.mainNodeIds).toEqual(['main-classic']);
+    });
+});

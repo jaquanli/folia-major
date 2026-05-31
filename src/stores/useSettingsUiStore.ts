@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type React from 'react';
 import { DEFAULT_CADENZA_TUNING, DEFAULT_CAPPELLA_TUNING, DEFAULT_FUME_TUNING, DEFAULT_PARTITA_TUNING, DEFAULT_TILT_TUNING, type CadenzaTuning, type CappellaAvatarSource, type CappellaEmojiImage, type CappellaTuning, type FumeTuning, type PartitaTuning, type QueueAddBehavior, type StatusMessage, type StoredCappellaEmojiImage, type StoredCustomLyricsFont, type Theme, type TiltTuning, type VisualizerMode } from '../types';
 import { DEFAULT_VISUALIZER_MODE, getVisualizerRegistryEntry, hasVisualizerMode } from '../components/visualizer/registry';
+import { createDefaultVisualizerComplex, readStoredVisualizerComplex, writeStoredVisualizerComplex, type VisualizerComplexV1 } from '../components/visualizer/complex';
 import { getLyricFilterError } from '../utils/lyrics/filtering';
 import { buildStoredCappellaEmojiPack, clearCustomCappellaEmojiPack, isSupportedCappellaEmojiFile, MAX_CAPPELLA_CUSTOM_EMOJI_IMAGES, saveCustomCappellaEmojiPack } from '../services/cappellaEmojiPack';
 import { clearUploadedLyricsFont, uploadAndRegisterLyricsFont } from '../services/customLyricsFont';
@@ -405,6 +406,7 @@ type SettingsUiState = {
     volume: number;
     isMuted: boolean;
     loopMode: 'off' | 'all' | 'one';
+    visualizerComplex: VisualizerComplexV1;
     isSubSettingsViewOpen: boolean;
     setStatusSetter: (setter: StatusSetter | null) => void;
     setAudioQuality: (quality: AudioQuality) => void;
@@ -456,6 +458,8 @@ type SettingsUiState = {
     handleSetVolume: (val: number) => void;
     handleToggleMute: () => void;
     handleToggleLoopMode: () => void;
+    handleSetVisualizerComplex: (complex: VisualizerComplexV1) => void;
+    handleResetVisualizerComplex: () => void;
 };
 
 const notify = (get: () => SettingsUiState, message: StatusMessage) => {
@@ -500,6 +504,7 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
     volume: readStoredVolume(),
     isMuted: getStoredBoolean('player_is_muted', false),
     loopMode: readStoredLoopMode(),
+    visualizerComplex: readStoredVisualizerComplex(),
     isSubSettingsViewOpen: false,
     setStatusSetter: (setter) => set({ statusSetter: setter }),
     setAudioQuality: (quality) => {
@@ -968,6 +973,16 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
         }
         set({ loopMode: next });
     },
+    handleSetVisualizerComplex: (complex) => {
+        writeStoredVisualizerComplex(complex);
+        set({ visualizerComplex: complex });
+    },
+    handleResetVisualizerComplex: () => {
+        const next = createDefaultVisualizerComplex();
+        writeStoredVisualizerComplex(next);
+        set({ visualizerComplex: next });
+        notify(get, { type: 'info', text: '视觉组合已重置' });
+    },
 }));
 
 export const selectSettingsUiSnapshot = (state: SettingsUiState) => ({
@@ -1049,4 +1064,7 @@ export const selectSettingsUiSnapshot = (state: SettingsUiState) => ({
     handleSetVolume: state.handleSetVolume,
     handleToggleMute: state.handleToggleMute,
     handleToggleLoopMode: state.handleToggleLoopMode,
+    visualizerComplex: state.visualizerComplex,
+    handleSetVisualizerComplex: state.handleSetVisualizerComplex,
+    handleResetVisualizerComplex: state.handleResetVisualizerComplex,
 });

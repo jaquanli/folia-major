@@ -63,7 +63,7 @@ export function useNeteaseLibrary({
     setStatusMsg,
     t,
 }: {
-    currentView: 'home' | 'player';
+    currentView: 'home' | 'player' | 'visEditor';
     hasOverlay: boolean;
     setStatusMsg: StatusSetter;
     t: (key: string) => string;

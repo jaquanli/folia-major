@@ -112,6 +112,7 @@
     "@chenglou/pretext": "^0.0.7",
     "@google/genai": "^1.46.0",
     "@neteasecloudmusicapienhanced/api": "^4.32.1",
+    "@xyflow/react": "^12.10.2",
     "axios": "^1.13.1",
     "blueimp-md5": "^2.19.0",
     "buffer": "^6.0.3",
