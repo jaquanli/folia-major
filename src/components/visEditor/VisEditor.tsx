@@ -1,3 +1,6 @@
+// 暂时搁置
+// 需要修改visualizer接入的数据结构，变动过大，暂时放弃
+
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
 import {
     applyNodeChanges,
@@ -76,6 +79,7 @@ const VisEditorInner = ({
 }: VisEditorProps) => {
     const flowWrapperRef = useRef<HTMLDivElement | null>(null);
     const isDraggingNodeRef = useRef(false);
+    const edgeReconnectSuccessfulRef = useRef(true);
     const { screenToFlowPosition } = useReactFlow();
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(complex.nodes[0]?.id ?? null);
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -159,8 +163,22 @@ const VisEditorInner = ({
     ), [complex.nodes]);
 
     const onReconnect = useCallback((oldEdge: Edge, connection: Connection) => {
+        edgeReconnectSuccessfulRef.current = true;
         setContextMenu(null);
         onChange(reconnectFlowEdge(complex, oldEdge, connection));
+    }, [complex, onChange]);
+
+    const onReconnectStart = useCallback(() => {
+        edgeReconnectSuccessfulRef.current = false;
+        setContextMenu(null);
+    }, []);
+
+    const onReconnectEnd = useCallback((_: unknown, edge: Edge) => {
+        if (!edgeReconnectSuccessfulRef.current) {
+            onChange(removeComplexEdge(complex, edge.id));
+        }
+
+        edgeReconnectSuccessfulRef.current = true;
     }, [complex, onChange]);
 
     const addNode = useCallback((request: AddComplexNodeRequest) => {
@@ -288,7 +306,9 @@ const VisEditorInner = ({
                                 onEdgesChange={onEdgesChange}
                                 onConnect={onConnect}
                                 isValidConnection={isValidConnection}
+                                onReconnectStart={onReconnectStart}
                                 onReconnect={onReconnect}
+                                onReconnectEnd={onReconnectEnd}
                                 edgesReconnectable
                                 onNodeClick={(_, node) => {
                                     if (!visibleNodeIds.has(node.id)) {
