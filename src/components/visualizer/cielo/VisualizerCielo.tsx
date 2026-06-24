@@ -10,8 +10,8 @@ import { extractColors } from '../../../utils/colorExtractor';
 
 // A simple predictable random number generator based on a seed
 const sfc32 = (a: number, b: number, c: number, d: number) => {
-    return function() {
-        a |= 0; b |= 0; c |= 0; d |= 0; 
+    return function () {
+        a |= 0; b |= 0; c |= 0; d |= 0;
         const t = (a + b | 0) + d | 0;
         d = d + 1 | 0;
         a = b ^ b >>> 9;
@@ -19,12 +19,12 @@ const sfc32 = (a: number, b: number, c: number, d: number) => {
         c = c << 21 | c >>> 11;
         c = c + t | 0;
         return (t >>> 0) / 4294967296;
-    }
+    };
 };
 
 const generateHashString = (str: string) => {
     let hash = 1779033703 ^ str.length;
-    for(let i = 0; i < str.length; i++) {
+    for (let i = 0; i < str.length; i++) {
         hash = Math.imul(hash ^ str.charCodeAt(i), 3432918353);
         hash = hash << 13 | hash >>> 19;
     }
@@ -59,11 +59,11 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const cameraY = useRef(0);
     const wordNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
-    
+
     // We only use React state for mounting/unmounting lines (discrete updates)
     const [activeLines, setActiveLines] = useState<number[]>([]);
     const [coverColors, setCoverColors] = useState<string[]>([]);
-    
+
     // Extract cover colors for diverse palette
     useEffect(() => {
         if (props.coverUrl) {
@@ -75,50 +75,50 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
 
     // We initialize a PRNG based on the song seed for consistent lyric placement cascading without overlaps
     const wordLayouts = useMemo(() => {
-        const layouts = new Map<string, { worldX: number, worldY: number, fontSize: number, opacity: number, isOutline: boolean }>();
+        const layouts = new Map<string, { worldX: number, worldY: number, fontSize: number, opacity: number, isOutline: boolean; }>();
         const hashStr = typeof seed === 'string' ? seed : seed.toString();
         const getHash = generateHashString(hashStr);
         const localPrng = sfc32(getHash(), getHash(), getHash(), getHash());
-        
+
         const SCROLL_SPEED = 250 * cieloTuning.cameraSpeed; // Much faster base speed
         const width = 1200; // Reference width for generation
-        
-        const placedRects: { x: number, y: number, w: number, h: number }[] = [];
-        
+
+        const placedRects: { x: number, y: number, w: number, h: number; }[] = [];
+
         lines.forEach((line, lineIndex) => {
             const lineHash = generateHashString(seed + lineIndex.toString())();
             // Stagger the line base X
             const startX = width * 0.2 + (lineHash % 1000 / 1000) * width * 0.6;
-            
+
             line.words.forEach((word, wordIndex) => {
                 const wordId = `${lineIndex}_${wordIndex}`;
-                
+
                 let baseTimeY = word.startTime * SCROLL_SPEED;
-                
+
                 const isHuge = localPrng() > 0.85;
                 const isOutline = localPrng() > 0.7;
                 // Directly use fontSize instead of scale to avoid blurry WebKit transform rasterization
                 const fontSize = isHuge ? 150 + localPrng() * 100 : 50 + localPrng() * 50;
-                
+
                 // Estimated bounding box
                 const estW = word.text.length * fontSize * 1.1;
                 const estH = fontSize * 1.2;
-                
+
                 let bestX = startX;
                 let bestY = baseTimeY;
                 let minOverlap = Infinity;
-                
+
                 // Collision avoidance: try 15 random offset candidates and pick the one with minimal overlap
                 for (let i = 0; i < 15; i++) {
                     const testX = startX + (localPrng() - 0.5) * 800;
                     const testY = baseTimeY + (localPrng() - 0.5) * 80; // Allow slight Y jitter
-                    
+
                     let overlapArea = 0;
                     for (const rect of placedRects) {
                         // Fast vertical bounding check
                         if (Math.abs(rect.y - testY) < (rect.h + estH)) {
-                            const dx = Math.max(0, Math.min(testX + estW/2, rect.x + rect.w/2) - Math.max(testX - estW/2, rect.x - rect.w/2));
-                            const dy = Math.max(0, Math.min(testY + estH/2, rect.y + rect.h/2) - Math.max(testY - estH/2, rect.y - rect.h/2));
+                            const dx = Math.max(0, Math.min(testX + estW / 2, rect.x + rect.w / 2) - Math.max(testX - estW / 2, rect.x - rect.w / 2));
+                            const dy = Math.max(0, Math.min(testY + estH / 2, rect.y + rect.h / 2) - Math.max(testY - estH / 2, rect.y - rect.h / 2));
                             overlapArea += dx * dy;
                         }
                     }
@@ -133,9 +133,9 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                         bestY = testY;
                     }
                 }
-                
+
                 placedRects.push({ x: bestX, y: bestY, w: estW, h: estH });
-                
+
                 layouts.set(wordId, {
                     worldY: bestY,
                     worldX: bestX,
@@ -151,15 +151,15 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
     // Update active lines based on currentTime (discrete updates, roughly every few seconds)
     useMotionValueEvent(currentTime, 'change', (time) => {
         // Massive time windows to ensure words spawn completely off-screen and scroll all the way out
-        const PRE_TIME = 15.0; 
-        const POST_TIME = 15.0; 
-        
+        const PRE_TIME = 15.0;
+        const POST_TIME = 15.0;
+
         const newActiveLines: number[] = [];
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const startTime = line.startTime;
             const endTime = line.endTime ?? (startTime + 3);
-            
+
             if (time >= startTime - PRE_TIME && time <= endTime + POST_TIME) {
                 newActiveLines.push(i);
             }
@@ -183,7 +183,7 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
             const time = currentTime.get();
             // Must match the useMemo SCROLL_SPEED perfectly!
             const SCROLL_SPEED = 250 * cieloTuning.cameraSpeed;
-            
+
             // CameraY is strictly bound to the timeline!
             cameraY.current = time * SCROLL_SPEED;
 
@@ -202,13 +202,13 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                         // Offset by height * 0.35 so the word crosses the upper-middle of screen exactly when sung
                         const screenY = layout.worldY - cameraY.current + (height * 0.35);
                         const baseTransform = `translate3d(${layout.worldX}px, ${screenY}px, 0)`;
-                        
+
                         // We must apply ALL styles (transform, color, opacity) to the children, NOT the parent!
                         // If the parent has any transform or opacity, it creates an isolated stacking context,
                         // which breaks mix-blend-mode: difference from reaching the WebGL canvas!
                         const bgNode = domNode.firstElementChild as HTMLElement | null;
                         const textNode = domNode.firstElementChild?.nextElementSibling as HTMLElement | null;
-                        
+
                         if (textNode) {
                             textNode.style.transform = baseTransform;
                             textNode.style.fontSize = `${layout.fontSize}px`;
@@ -221,11 +221,11 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                                 textNode.style.WebkitTextStroke = 'none';
                             }
                         }
-                        
+
                         if (bgNode) {
                             let bgOpacity = 0;
                             let bgTransform = '';
-                            
+
                             // Deterministic random direction for fly-in/fly-out per word
                             const rawHash = Math.sin(wordIndex * 12.9898 + lineIndex * 78.233) * 43758.5453;
                             const hash = rawHash - Math.floor(rawHash);
@@ -233,30 +233,30 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                             const distance = 30; // max fly distance
                             const dx = Math.cos(angle) * distance;
                             const dy = Math.sin(angle) * distance;
-                            
+
                             if (time >= word.startTime && time <= word.endTime) {
                                 // Active - Entering / Sung
                                 const duration = word.endTime - word.startTime;
                                 const enterDuration = Math.min(0.25, duration);
                                 const enterProgress = enterDuration > 0 ? Math.min(1.0, (time - word.startTime) / enterDuration) : 1.0;
-                                
+
                                 // easeOutCubic
                                 const easeOut = 1 - Math.pow(1 - enterProgress, 3);
-                                
+
                                 bgOpacity = enterProgress;
                                 // Flies in from offset to 0
                                 bgTransform = `translate3d(${dx * (1 - easeOut)}px, ${dy * (1 - easeOut)}px, 0) scale(${0.8 + 0.2 * easeOut})`;
                             } else if (time > word.endTime && time < word.endTime + 0.4) {
                                 // Exiting
                                 const exitProgress = (time - word.endTime) / 0.4;
-                                
+
                                 bgOpacity = 1.0 - exitProgress;
                                 // No fly-out, just stay in place
                                 bgTransform = 'translate3d(0px, 0px, 0px) scale(1.0)';
                             }
-                            
-                            // Multiply by layout.opacity to respect global distance fading
-                            bgNode.style.opacity = `${bgOpacity * layout.opacity}`;
+
+                            // Use bgOpacity directly so the box is fully opaque when active
+                            bgNode.style.opacity = `${bgOpacity}`;
                             bgNode.style.fontSize = `${layout.fontSize}px`;
                             // Compose the base position with the fly-in animation
                             bgNode.style.transform = `${baseTransform} ${bgTransform}`;
@@ -276,7 +276,7 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
         <VisualizerShell {...props}>
             <div ref={containerRef} className="absolute inset-0 overflow-hidden pointer-events-none">
                 {/* Background WebGL Shader layer */}
-                <CieloBackground 
+                <CieloBackground
                     currentTime={currentTime}
                     audioPower={audioPower}
                     audioBands={audioBands}
@@ -289,6 +289,10 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                 <div className="absolute inset-0">
                     {activeLines.map(lineIndex => {
                         const line = lines[lineIndex];
+                        
+                        // Use theme.isDaylight to determine pure white or pure black
+                        const pureBoxColor = theme.isDaylight ? '#ffffff' : '#000000';
+
                         return line.words.map((word, wordIndex) => {
                             const wordId = `${lineIndex}_${wordIndex}`;
                             return (
@@ -300,8 +304,8 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                                     }}
                                     className="absolute top-0 left-0" // NO stacking context properties here!
                                 >
-                                    {/* The background box. Uses theme.backgroundColor for high contrast against text. */}
-                                    <div className="word-bg-box absolute inset-[-0.1em] rounded-sm pointer-events-none origin-center" style={{ backgroundColor: theme.backgroundColor, opacity: 0, willChange: 'transform, opacity' }} />
+                                    {/* The background box. Uses pure black/white for maximum contrast. */}
+                                    <div className="word-bg-box absolute inset-[-0.1em] rounded-sm pointer-events-none origin-center" style={{ backgroundColor: pureBoxColor, opacity: 0, willChange: 'transform, opacity' }} />
                                     {/* The text */}
                                     <div className="word-text relative z-10 font-black tracking-widest origin-center whitespace-nowrap" style={{ mixBlendMode: 'difference', willChange: 'transform, opacity' }}>{word.text}</div>
                                 </div>
