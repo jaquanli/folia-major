@@ -88,9 +88,9 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
 
         const placedRects: { x: number, y: number, w: number, h: number, startTime: number, endTime: number }[] = [];
         
-        // Vastly increased font size bounds for impact
-        const MAX_SIZE = 160;
-        const MIN_SIZE = 70;
+        // Slightly reduced base font size for more breathing room, will be scaled by CSS responsive factor
+        const MAX_SIZE = 110;
+        const MIN_SIZE = 45;
 
         lines.forEach((line, lineIndex) => {
             const layoutUnits = buildPostLyricLayoutUnits(line, { semantic: true, sticky: true });
@@ -126,36 +126,42 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
             const estW = MAX_SIZE * 1.2;
             const endTime = line.endTime ?? line.startTime + 3;
 
-            let bestX = width * 0.15 + localPrng() * width * 0.7;
-            
             // CRITICAL FIX for world-fixed lyrics:
             // Calculate worldY so that the temporal MIDPOINT of the line crosses the spatial MIDPOINT of the screen!
             // This ensures long vertical lines are perfectly centered during their active lifespan, preventing cutoffs.
             const midTime = (line.startTime + endTime) / 2;
-            const bestY = midTime * SCROLL_SPEED + (height / 2) - (estH / 2);
+            const bestY = midTime * SCROLL_SPEED;
+            // The actual physical top Y in the reference frame
+            const physicalY = bestY + (height / 2) - (estH / 2);
 
-            // Collision avoidance (only lines overlapping in time, and ONLY shift X to preserve time-sync)
-            for (let i = 0; i < 20; i++) {
+            let bestX = width * 0.15 + localPrng() * (width * 0.7 - estW);
+            
+            // Collision avoidance 
+            for (let i = 0; i < 50; i++) {
                 let overlap = false;
                 for (const rect of placedRects) {
-                    if (line.startTime < rect.endTime && endTime > rect.startTime) {
-                        if (Math.abs(rect.y - bestY) < (rect.h + estH) * 0.5 && Math.abs(rect.x - bestX) < (rect.w + estW) * 0.5) {
-                            overlap = true;
-                            break;
-                        }
+                    // For a world-fixed canvas, spatial overlap in the world guarantees visual overlap!
+                    // Time overlap is irrelevant because tall text blocks remain on-screen long after they finish singing.
+                    const overlapX = rect.x < bestX + estW + 40 && rect.x + rect.w + 40 > bestX;
+                    const overlapY = rect.y < physicalY + estH && rect.y + rect.h > physicalY;
+                    
+                    if (overlapX && overlapY) {
+                        overlap = true;
+                        break;
                     }
                 }
                 if (!overlap) break;
-                // Shift X significantly to escape the column
-                bestX += (localPrng() > 0.5 ? 1 : -1) * (estW + 50 + localPrng() * 100);
-                bestX = Math.max(width * 0.1, Math.min(width * 0.9 - estW, bestX));
+                // Instead of incremental shifting which gets stuck at edges and causes identical overlaps,
+                // completely re-roll a new random X position in the safe zone!
+                bestX = width * 0.15 + localPrng() * (width * 0.7 - estW);
             }
 
-            placedRects.push({ x: bestX, y: bestY, w: estW, h: estH, startTime: line.startTime, endTime });
+            placedRects.push({ x: bestX, y: physicalY, w: estW, h: estH, startTime: line.startTime, endTime });
 
             layouts.set(lineIndex, {
                 worldX: bestX,
-                worldY: bestY,
+                worldY: bestY, // Pure time-based for responsive RAF calculation
+                estH,
                 opacity,
                 isOutline,
                 layoutUnits: unitsWithStyle
@@ -207,6 +213,12 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
             // Update DOM Lyrics
             const width = containerRef.current?.clientWidth ?? 1200;
             const height = containerRef.current?.clientHeight ?? 800;
+            
+            // Calculate a scale factor to make font sizes responsive to viewport
+            const scaleFactor = Math.min(width / 1200, height / 800);
+            if (containerRef.current) {
+                containerRef.current.style.setProperty('--scale-factor', scaleFactor.toString());
+            }
 
             activeLines.forEach(lineIndex => {
                 const layout = lineLayouts.get(lineIndex);
@@ -214,11 +226,11 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
 
                 const domNode = lineNodesRef.current.get(lineIndex);
                 if (domNode) {
-                    // Revert to world space, but because worldY is perfectly centered in useMemo,
-                    // we don't need arbitrary offsets here. Just standard camera subtraction.
-                    // (We also add a small adjustment to keep it strictly aligned if actual viewport height differs from 800 base)
-                    const screenY = layout.worldY - cameraY.current + (height - 800) / 2;
-                    const baseTransform = `translate3d(${layout.worldX}px, ${screenY}px, 0)`;
+                    const screenX = layout.worldX * (width / 1200);
+                    const scaledEstH = layout.estH * scaleFactor;
+                    // Center the text vertically across the scaled screen at its temporal midpoint
+                    const screenY = (layout.worldY - cameraY.current) * scaleFactor + (height / 2) - (scaledEstH / 2);
+                    const baseTransform = `translate3d(${screenX}px, ${screenY}px, 0)`;
 
                     const shadowNode = domNode.children[0] as HTMLElement | undefined;
                     const textNode = domNode.children[1] as HTMLElement | undefined;
@@ -311,7 +323,7 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                                 {/* 1. Legibility Halo (Normal blend) */}
                                 <div className="relative font-black tracking-widest pointer-events-none" style={{ writingMode: 'vertical-rl', color: 'transparent', willChange: 'transform, opacity, filter' }}>
                                     {layout.layoutUnits.map((u, i) => (
-                                        <span key={i} style={{ fontSize: `${u.size}px`, lineHeight: 1.1 }}>
+                                        <span key={i} style={{ fontSize: `calc(${u.size}px * var(--scale-factor, 1))`, lineHeight: 1.1 }}>
                                             {u.unit.words.map((w, j) => (
                                                 <span key={j} style={{ display: 'inline-block', opacity: 0, transform: 'scale(1.2)', filter: 'blur(10px)', transition: 'opacity 0.3s ease-out, transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1), filter 0.3s ease-out' }}>{w.text}</span>
                                             ))}
@@ -321,7 +333,7 @@ export const VisualizerCielo: React.FC<VisualizerSharedProps> = (props) => {
                                 {/* 2. Text (Difference blend) - Directly inverts the canvas (darkened by halo) */}
                                 <div className="absolute top-0 left-0 font-black tracking-widest pointer-events-none" style={{ writingMode: 'vertical-rl', mixBlendMode: 'difference', willChange: 'transform, opacity, filter' }}>
                                     {layout.layoutUnits.map((u, i) => (
-                                        <span key={i} style={{ fontSize: `${u.size}px`, lineHeight: 1.1 }}>
+                                        <span key={i} style={{ fontSize: `calc(${u.size}px * var(--scale-factor, 1))`, lineHeight: 1.1 }}>
                                             {u.unit.words.map((w, j) => (
                                                 <span key={j} style={{ display: 'inline-block', opacity: 0, transform: 'scale(1.2)', filter: 'blur(10px)', transition: 'opacity 0.3s ease-out, transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1), filter 0.3s ease-out' }}>{w.text}</span>
                                             ))}
